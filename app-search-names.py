@@ -1,7 +1,7 @@
 import streamlit as st 
 import pandas as pd 
 
-st.title('Streamlit- Search Names')
+st.title('Streamlit- Search Names Vs 1.0' )
 
 DATA_URL = 'dataset.csv'
 
