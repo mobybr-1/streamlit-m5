@@ -30,7 +30,7 @@ def load_data(sheets_url):
     csv_url = sheets_url.replace("/edit#gid=", "/export?format=csv&gid=")
     return pd.read_csv(csv_url)
 
-data = load_data(st.secrets["https://docs.google.com/spreadsheets/d/14ljyiFMrpeYW5BSK5AOILcnYY2uSKG6D/edit#gid=37885378"])
+data = load_data(st.secrets["public_gsheets_url"])
 
 
 
