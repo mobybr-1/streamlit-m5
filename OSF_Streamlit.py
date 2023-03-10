@@ -9,8 +9,8 @@ import streamlit as st
 #---PAGE CONFIG---
 st.set_page_config(page_title="Alumnos Inscritos SS FJ2023",
                     )
-#with open("main.css") as css:
-#    st.markdown(f"<style>{css.read()}</style>", unsafe_allow_html=True)
+with open("main.css") as css:
+    st.markdown(f"<style>{css.read()}</style>", unsafe_allow_html=True)
 st.title("Dashboard de Estudiantes por OSF")
 sidebar = st.sidebar
 sidebar.title("Selección de Datos")
