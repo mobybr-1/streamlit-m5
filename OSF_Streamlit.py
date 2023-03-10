@@ -2,60 +2,68 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
+
+
 #streamlit run .\OSF_Streamlit.py
 
 #---PAGE CONFIG---
-#To Do: Hacer el page config bonito
+st.set_page_config(page_title="Alumnos Inscritos SS FJ2023",
+                    )
+#with open("main.css") as css:
+#    st.markdown(f"<style>{css.read()}</style>", unsafe_allow_html=True)
 st.title("Dashboard de Estudiantes por OSF")
 sidebar = st.sidebar
-sidebar.title("Barra de opciones")
+sidebar.title("Selección de Datos")
 
 #---READ DATA---
 @st.cache
-def load_data():
-    data=pd.read_excel("Machote Inscripciones.xlsx",sheet_name="ListadoCompleto")
-    data=data.drop(["En cuantos proyectos esta el alumno","Unnamed: 3","Plan de estudios"],axis=1) #Borrar columnas extras
-    return data
+#def load_data():
+    #data=pd.read_excel("Machote Inscripciones.xlsx",sheet_name="ListadoCompleto")
+    #data=data.drop(["En cuantos proyectos esta el alumno","Unnamed: 3","Plan de estudios"],axis=1) #Borrar columnas extras
+    #return data
 
-data_load_state=st.text("Loading data...")
-data=load_data()
-data_load_state.text("")
+#data_load_state=st.text("Loading data...")
+#data=load_data()
+#data_load_state.text("")
+
+def load_data(sheets_url):
+    csv_url = sheets_url.replace("/edit#gid=", "/export?format=csv&gid=")
+    return pd.read_csv(csv_url)
+
+data = load_data(st.secrets["https://docs.google.com/spreadsheets/d/14ljyiFMrpeYW5BSK5AOILcnYY2uSKG6D/edit#gid=37885378"])
+
+
 
 #---FILTROS---
-sidebar.write("Seleccione filtros deseados")
+#Initialising SessionState's
+if "load_state" not in st.session_state:
+    st.session_state.load_state = False
+def SessionStateOff():
+    st.session_state.load_state=False
 
 #Filtro por OSF
 OSFname=sidebar.selectbox("Seleccionar OSF:", 
-                            data['Organización SF'].unique())
+                        data['Organización SF'].unique())
 OSFdata=data[data["Organización SF"]==OSFname] #Filtra experiencias por OSF
-#Initialising SessionState's
-if OSFdata not in st.session_state:
-    st.session_state.load_state = False
+st.sidebar.markdown("##")
 
 #Filtro de experiencias de OSF
 with st.sidebar.form(key="my_form"):
+    #Selección de experiencia
     OSFexp=st.selectbox("Nombre de la experiencia", 
                             options=OSFdata['Nombre experiencia'].unique())
-    submit_button=st.form_submit_button(label="Buscar") #Botón 
+    #Datos de alumnos deseados
+    Datos = st.multiselect(label="Datos de interés sobre los alumnos",
+                            #label_visibility="hidden",
+                            options=list(OSFdata.columns),
+                            default=["No. plazas", "Matrícula (A0 o A00)", "Nombre Completo del estudiante"])
+    #Botón de submit
+    submit_button=st.form_submit_button(label="Buscar")
+
 OSFexpdata=OSFdata[OSFdata["Nombre experiencia"]==OSFexp] #Filtro
 OSFexpdata=OSFexpdata.reset_index()
 OSFexpdata=OSFexpdata.drop("index",axis=1)
 st.sidebar.markdown("##")
-
-#---DEV---(BORRAR)
-sidebar.write("DEV BUTTON")
-if sidebar.checkbox("Show dataframe"):
-    st.dataframe(OSFexpdata)
-    st.markdown("##")
-
-#---SELECCION DE DATOS---
-#Datos de alumnos deseados
-st.subheader("Selección de Datos")
-Datos = st.multiselect(label="Puedes omitir los datos que consideres no relevantes",
-                            #label_visibility="hidden",
-                            options=list(OSFexpdata.columns),
-                            default=list(OSFexpdata.columns))
-st.markdown("""---""")
 
 #Obtener datos
 def GetDataStudent (Col,fila): #Col: seleccionadas de Datos, Fila: estudiantes
@@ -65,29 +73,28 @@ def GetDataStudent (Col,fila): #Col: seleccionadas de Datos, Fila: estudiantes
         Dic_Datos[i]=Dato #Crear Key:Value
     return Dic_Datos
 
-#To Do, hacer una función que imprima cada alumno de forma bonita. USAR st.expander
-#Diseño del expander
-def GetExpander(dicc):
-    my_expander = st.expander(label='Ver Datos')
-    with my_expander:
-        st.write(dicc)
-
 #---MAIN---
 st.subheader("Alumnos")
 if submit_button or st.session_state.load_state:
     st.session_state.load_state=True
     #Imprimir Datos por alumno personalizado
+    alumnos = []
     for i in range(OSFexpdata.shape[0]):
         Alumno=GetDataStudent(Datos,i) #Datos en diccionario
-        st.write(f"Alumno {i+1}") #Cuando tengamos datos de alumnos: st.write(texto["Nombre Completo del estudiante"])
-        GetExpander(Alumno)
+        alumnos.append(Alumno)
+    st.dataframe(alumnos)
     st.markdown("""---""")
 
     #Salvar datos en excel
-    df=pd.DataFrame(OSFexpdata)
-    Save_data=st.button("Salvar Datos")
-    if Save_data:
-        st.write("Done")
-
-    #Dev stuff (BORRAR)
-    st.write(Alumno.keys())
+    st.subheader("Salvar Datos")
+    df=pd.DataFrame(alumnos)
+    @st.cache
+    def convert_df(df):
+        return df.to_csv(index=False).encode('utf-8')
+    csv = convert_df(df)
+    st.download_button(
+        label="Salvar Datos",
+        data=csv,
+        file_name=f'Alumnos_{OSFexp}_2023.csv',
+        mime='text/csv',
+        on_click=SessionStateOff())
